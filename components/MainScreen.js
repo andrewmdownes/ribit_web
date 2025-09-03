@@ -16,7 +16,7 @@ import { authApi, profileApi, citiesApi, ridesApi, locationsApi } from '../lib/a
 import AuthCheck from './AuthCheck';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Modal } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+//import { Calendar } from 'react-native-calendars';
 import WheelPickerExpo from 'react-native-wheel-picker-expo';
 import { Picker } from '@react-native-picker/picker';
 import Dropdown from './Dropdown';
