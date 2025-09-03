@@ -1,5 +1,6 @@
-// App.js with platform-specific Stripe import
+// App.js with platform-specific imports and web fallbacks
 import React from 'react';
+import { Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -7,8 +8,19 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Use our platform-specific wrapper
-import { StripeProvider } from './lib/stripeWrapper';
+// Platform-specific Stripe import
+let StripeProvider;
+try {
+  if (Platform.OS === 'web') {
+    StripeProvider = require('./lib/stripeWrapper.web').StripeProvider;
+  } else {
+    StripeProvider = require('./lib/stripeWrapper.native').StripeProvider;
+  }
+} catch (error) {
+  console.log('Stripe import error:', error);
+  // Fallback for web
+  StripeProvider = ({ children }) => children;
+}
 
 // Import screens
 import SignUpScreen from './components/SignUpScreen';
@@ -23,7 +35,8 @@ import MyRidesScreen from './components/MyRidesScreen';
 import ProfileScreen from './components/ProfileScreen';
 import ViewDriverProfileScreen from './components/ViewDriverProfileScreen';
 import StripeApp from './components/StripeApp';
-import ReviewScreen  from './components/ReviewScreen';
+import ReviewScreen from './components/ReviewScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -69,8 +82,10 @@ export default function App() {
 
   if (!fontsLoaded) return null;
 
+  const stripePublishableKey = "pk_test_51RFSvZBzodOqsZP1NrhYlQsriGXAuf4A6YZwPwJ4ouFQyceljKBp5WGZhX8V3kTHTlww8mtHFH2JlqbuNwGGCDBw004h4gAnHX";
+
   return (
-    <StripeProvider publishableKey="pk_test_51RFSvZBzodOqsZP1NrhYlQsriGXAuf4A6YZwPwJ4ouFQyceljKBp5WGZhX8V3kTHTlww8mtHFH2JlqbuNwGGCDBw004h4gAnHX">
+    <StripeProvider publishableKey={stripePublishableKey}>
       <NavigationContainer>
         <Stack.Navigator 
           initialRouteName="SignUp"
@@ -83,8 +98,7 @@ export default function App() {
           <Stack.Screen name="SignIn" component={SignInScreen} />
           <Stack.Screen name="VerifyScreen" component={VerifyScreen} />
           <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen name = "ReviewScreen" component={ReviewScreen}/>
-
+          <Stack.Screen name="ReviewScreen" component={ReviewScreen}/>
           <Stack.Screen name="RideDetail" component={RideDetailScreen} />
           <Stack.Screen name="YourRide" component={YourRideScreen} />
           <Stack.Screen name="DriverSignUp" component={DriverSignUpScreen} />

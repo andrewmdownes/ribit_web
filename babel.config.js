@@ -1,4 +1,4 @@
-
+// babel.config.js - Based on your original
 module.exports = function(api) {
   api.cache(true);
   return {
