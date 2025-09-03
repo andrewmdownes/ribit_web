@@ -52,8 +52,7 @@
     "react-native-web": "^0.20.0",
     "react-native-wheel-picker-expo": "^0.5.4",
     "resend": "^4.5.1",
-    "stripe": "^18.2.0",
-    "undefined": "\\"
+    "stripe": "^18.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
