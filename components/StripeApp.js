@@ -58,7 +58,7 @@ export default function StripeApp({ route, navigation }) {
     }
   };
 
-  // Test server connection function
+  // Test server connection function - SKIP PAYMENT AND BOOK RIDE
   const testServerConnection = async () => {
     if (!agreesToTerms) {
       Alert.alert("Terms Required", "Please agree to the terms and conditions to continue.");
@@ -69,9 +69,9 @@ export default function StripeApp({ route, navigation }) {
 
     try {
     const luggagePayload = {
-      small: luggage.small ?? 0,
-      medium: luggage.medium ?? 0,
-      large: luggage.large ?? 0,
+      small: luggage?.small ?? 0,
+      medium: luggage?.medium ?? 0,
+      large: luggage?.large ?? 0,
     };
 
     const { data, error } = await ridesApi.bookRide(ride.id, seats, luggagePayload);
@@ -291,8 +291,8 @@ const completeBooking = async () => {
 
       <View style={styles.content}>
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          {/* Development Test Button - Only show in development */}
-          {(process.env.NODE_ENV === 'development' || __DEV__) && (
+          {/* Development Test Button - ALWAYS SHOW FOR TESTING */}
+          {true && (
             <TouchableOpacity 
               onPress={testServerConnection}
               style={styles.testButton}
@@ -303,14 +303,14 @@ const completeBooking = async () => {
 
           {/* Environment Indicator */}
           <View style={{
-            backgroundColor: __DEV__ ? '#ff6b6b' : '#5DBE62',
+            backgroundColor: '#ff6b6b',
             padding: 8,
             borderRadius: 4,
             marginBottom: 16,
             alignItems: 'center'
           }}>
             <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>
-              {__DEV__ ? '🔧 DEVELOPMENT MODE' : '🚀 PRODUCTION MODE'}
+              🔧 TESTING MODE - Skip Payment Available
             </Text>
             <Text style={{ color: 'white', fontSize: 10 }}>
               API: {API_URL} | Platform: {Platform.OS}
