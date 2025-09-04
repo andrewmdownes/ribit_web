@@ -45,15 +45,17 @@ export default function StripeApp({ route, navigation }) {
       const { session } = await authApi.getSession();
       if (session?.user?.email) {
         setUserEmail(session.user.email);
+        console.log('👤 User email loaded:', session.user.email);
       } else {
         // Fallback to profile email
         const { data: profile } = await profileApi.getProfile();
         if (profile?.email) {
           setUserEmail(profile.email);
+          console.log('👤 Profile email loaded:', profile.email);
         }
       }
     } catch (error) {
-      console.error('Error loading user email:', error);
+      console.error('❌ Error loading user email:', error);
       Alert.alert('Error', 'Could not load user information');
     }
   };
@@ -116,6 +118,12 @@ export default function StripeApp({ route, navigation }) {
   const fetchPaymentIntentClientSecret = async () => {
     try {
       console.log('🔗 Fetching payment intent from:', `${API_URL}/api/create-payment-intent`);
+      console.log('📋 Payment details:', {
+        amount: totalPrice * 100,
+        email: userEmail,
+        rideId: ride.id,
+        seats,
+      });
       
       const response = await fetch(`${API_URL}/api/create-payment-intent`, {
         method: "POST",
@@ -130,6 +138,8 @@ export default function StripeApp({ route, navigation }) {
         }),
       });
 
+      console.log('📡 Backend response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Payment intent request failed:', response.status, errorText);
@@ -137,9 +147,13 @@ export default function StripeApp({ route, navigation }) {
       }
 
       const data = await response.json();
-      console.log('✅ Payment intent response:', { hasClientSecret: !!data.clientSecret });
+      console.log('✅ Payment intent response:', { 
+        hasClientSecret: !!data.clientSecret,
+        clientSecretPrefix: data.clientSecret?.substring(0, 20) + '...'
+      });
       
       if (data.error) {
+        console.error('❌ Backend returned error:', data.error);
         return { clientSecret: null, error: data.error };
       }
       
@@ -151,17 +165,25 @@ export default function StripeApp({ route, navigation }) {
   };
 
   const handleCardPayment = async () => {
+    console.log('💳 Starting card payment process...');
+    console.log('🎯 Card details complete:', cardDetails?.complete);
+    console.log('📋 Terms agreed:', agreesToTerms);
+    console.log('🔧 Platform:', Platform.OS);
+
     if (!cardDetails?.complete) {
+      console.log('❌ Card details incomplete');
       Alert.alert("Incomplete Card", "Please enter complete card details.");
       return;
     }
 
     if (!agreesToTerms) {
+      console.log('❌ Terms not agreed');
       Alert.alert("Terms Required", "Please agree to the terms and conditions to continue.");
       return;
     }
 
     if (!confirmPayment) {
+      console.log('❌ confirmPayment function not available');
       Alert.alert("Error", "Payment not available on this platform.");
       return;
     }
@@ -172,7 +194,14 @@ export default function StripeApp({ route, navigation }) {
       
       const { clientSecret, error } = await fetchPaymentIntentClientSecret();
       if (error) {
+        console.error('❌ Failed to get client secret:', error);
         Alert.alert("Payment Error", error);
+        return;
+      }
+
+      if (!clientSecret) {
+        console.error('❌ No client secret received');
+        Alert.alert("Payment Error", "Failed to initialize payment. Please try again.");
         return;
       }
 
@@ -180,20 +209,41 @@ export default function StripeApp({ route, navigation }) {
       const { paymentIntent, error: confirmError } = await confirmPayment(clientSecret, {
         paymentMethodType: 'Card',
         paymentMethodData: {
-          billingDetails: { email: userEmail },
+          billingDetails: { 
+            email: userEmail,
+            name: userEmail.split('@')[0] // Use email prefix as name fallback
+          },
         },
       });
 
       if (confirmError) {
         console.error('❌ Payment failed:', confirmError);
-        Alert.alert("Payment Failed", confirmError.message);
+        
+        // More specific error messages
+        let errorMessage = confirmError.message;
+        if (confirmError.type === 'card_error') {
+          errorMessage = `Card Error: ${confirmError.message}`;
+        } else if (confirmError.type === 'validation_error') {
+          errorMessage = `Validation Error: ${confirmError.message}`;
+        }
+        
+        Alert.alert("Payment Failed", errorMessage);
       } else if (paymentIntent) {
         console.log('✅ Payment successful:', paymentIntent.status);
-        await completeBooking();
+        
+        if (paymentIntent.status === 'succeeded') {
+          await completeBooking();
+        } else {
+          console.error('❌ Payment not successful. Status:', paymentIntent.status);
+          Alert.alert("Payment Issue", `Payment status: ${paymentIntent.status}. Please try again.`);
+        }
+      } else {
+        console.error('❌ No payment intent returned');
+        Alert.alert("Payment Error", "No payment response received. Please try again.");
       }
     } catch (error) {
       console.error('💥 Unexpected payment error:', error);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      Alert.alert("Error", `Something went wrong: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -278,6 +328,16 @@ const completeBooking = async () => {
     return `${hour12}:${minute} ${ampm}`;
   };
 
+  // Debug card field changes
+  const handleCardChange = (details) => {
+    console.log('🎯 Card field changed:', {
+      complete: details.complete,
+      hasError: !!details.error,
+      errorMessage: details.error?.message
+    });
+    setCardDetails(details);
+  };
+
   // Render for all platforms - removed web restriction
   return (
     <SafeAreaView style={styles.container}>
@@ -315,6 +375,11 @@ const completeBooking = async () => {
             <Text style={{ color: 'white', fontSize: 10 }}>
               API: {API_URL} | Platform: {Platform.OS}
             </Text>
+            {__DEV__ && cardDetails && (
+              <Text style={{ color: 'white', fontSize: 10 }}>
+                Card Ready: {cardDetails.complete ? '✅' : '❌'}
+              </Text>
+            )}
           </View>
 
           {/* Ride Summary Card */}
@@ -401,8 +466,20 @@ const completeBooking = async () => {
                 placeholder={{ number: "4242 4242 4242 4242" }}
                 cardStyle={styles.card}
                 style={styles.cardContainer}
-                onCardChange={setCardDetails}
+                onCardChange={handleCardChange}
               />
+            )}
+            
+            {/* Show card validation status in dev mode */}
+            {__DEV__ && cardDetails && (
+              <Text style={{ 
+                fontSize: 12, 
+                color: cardDetails.complete ? '#28a745' : '#666', 
+                marginTop: 8 
+              }}>
+                Card Status: {cardDetails.complete ? 'Complete ✅' : 'Incomplete'}
+                {cardDetails.error && ` | Error: ${cardDetails.error.message}`}
+              </Text>
             )}
           </View>
 
@@ -428,9 +505,9 @@ const completeBooking = async () => {
 
           {/* Pay Button */}
           <TouchableOpacity
-            style={[styles.payButton, (!agreesToTerms || loading) && styles.payButtonDisabled]}
+            style={[styles.payButton, (!agreesToTerms || !cardDetails?.complete || loading) && styles.payButtonDisabled]}
             onPress={handleCardPayment}
-            disabled={!agreesToTerms || loading}
+            disabled={!agreesToTerms || !cardDetails?.complete || loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
