@@ -8,19 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Platform-specific Stripe import
-let StripeProvider;
-try {
-  if (Platform.OS === 'web') {
-    StripeProvider = require('./lib/stripeWrapper.web').StripeProvider;
-  } else {
-    StripeProvider = require('./lib/stripeWrapper.native').StripeProvider;
-  }
-} catch (error) {
-  console.log('Stripe import error:', error);
-  // Fallback for web
-  StripeProvider = ({ children }) => children;
-}
+// REMOVED: Platform-specific Stripe import from here - we'll load it only in StripeApp
 
 // Import screens
 import SignUpScreen from './components/SignUpScreen';
@@ -82,32 +70,30 @@ export default function App() {
 
   if (!fontsLoaded) return null;
 
-  const stripePublishableKey = "pk_test_51RFSvZBzodOqsZP1NrhYlQsriGXAuf4A6YZwPwJ4ouFQyceljKBp5WGZhX8V3kTHTlww8mtHFH2JlqbuNwGGCDBw004h4gAnHX";
+  // REMOVED: StripeProvider from here - now StripeApp handles its own Stripe loading
 
   return (
-    <StripeProvider publishableKey={stripePublishableKey}>
-      <NavigationContainer>
-        <Stack.Navigator 
-          initialRouteName="SignUp"
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: '#fff' },
-          }}
-        >
-          <Stack.Screen name="SignUp" component={SignUpScreen} />
-          <Stack.Screen name="SignIn" component={SignInScreen} />
-          <Stack.Screen name="VerifyScreen" component={VerifyScreen} />
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen name="ReviewScreen" component={ReviewScreen}/>
-          <Stack.Screen name="RideDetail" component={RideDetailScreen} />
-          <Stack.Screen name="YourRide" component={YourRideScreen} />
-          <Stack.Screen name="DriverSignUp" component={DriverSignUpScreen} />
-          <Stack.Screen name="VerificationStatus" component={DriverVerificationStatusScreen} />
-          <Stack.Screen name="ViewDriverProfile" component={ViewDriverProfileScreen} />
-          <Stack.Screen name="StripeApp" component={StripeApp} />
-        </Stack.Navigator>
-        <StatusBar style="light" backgroundColor="#5DBE62" />
-      </NavigationContainer>
-    </StripeProvider>
+    <NavigationContainer>
+      <Stack.Navigator 
+        initialRouteName="SignUp"
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#fff' },
+        }}
+      >
+        <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="SignIn" component={SignInScreen} />
+        <Stack.Screen name="VerifyScreen" component={VerifyScreen} />
+        <Stack.Screen name="MainTabs" component={MainTabs} />
+        <Stack.Screen name="ReviewScreen" component={ReviewScreen}/>
+        <Stack.Screen name="RideDetail" component={RideDetailScreen} />
+        <Stack.Screen name="YourRide" component={YourRideScreen} />
+        <Stack.Screen name="DriverSignUp" component={DriverSignUpScreen} />
+        <Stack.Screen name="VerificationStatus" component={DriverVerificationStatusScreen} />
+        <Stack.Screen name="ViewDriverProfile" component={ViewDriverProfileScreen} />
+        <Stack.Screen name="StripeApp" component={StripeApp} />
+      </Stack.Navigator>
+      <StatusBar style="light" backgroundColor="#5DBE62" />
+    </NavigationContainer>
   );
 }

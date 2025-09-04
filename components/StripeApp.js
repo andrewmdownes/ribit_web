@@ -13,16 +13,32 @@ import styles from '../styles/stripeAppStyles';
 import { ridesApi, authApi, profileApi } from '../lib/api';
 import { getPassengerPricingBreakdown } from '../lib/distances';
 
-// Import from our platform-specific wrapper
-import { CardField, useConfirmPayment } from '../lib/stripeWrapper';
+// Import platform-specific Stripe wrapper
+let StripeProvider, CardField, useConfirmPayment;
+try {
+  if (Platform.OS === 'web') {
+    const stripeWrapper = require('../lib/stripeWrapper.web');
+    StripeProvider = stripeWrapper.StripeProvider;
+    CardField = stripeWrapper.CardField;
+    useConfirmPayment = stripeWrapper.useConfirmPayment;
+  } else {
+    const stripeWrapper = require('../lib/stripeWrapper.native');
+    StripeProvider = stripeWrapper.StripeProvider;
+    CardField = stripeWrapper.CardField;
+    useConfirmPayment = stripeWrapper.useConfirmPayment;
+  }
+} catch (error) {
+  console.log('Stripe import error:', error);
+  // Fallback components
+  StripeProvider = ({ children }) => children;
+  CardField = () => null;
+  useConfirmPayment = () => ({ confirmPayment: null, loading: false });
+}
 
-// UPDATED: Default to Vercel server (replace with your actual domain)
 const API_URL = "https://landing-page-jet-rho-33.vercel.app";
 
-// Alternative if you want to easily switch for local testing:
-// const API_URL = "http://192.168.86.78:3000";  // Uncomment for local testing
-
-export default function StripeApp({ route, navigation }) {
+// Main StripeApp Component wrapped with its own StripeProvider
+function StripeAppContent({ route, navigation }) {
   const { ride, seats, totalPrice, luggage } = route.params;
 
   const [cardDetails, setCardDetails] = useState();
@@ -30,8 +46,17 @@ export default function StripeApp({ route, navigation }) {
   const [loading, setLoading] = useState(false);
   const [agreesToTerms, setAgreesToTerms] = useState(false);
   
-  // Payment hooks
-  const { confirmPayment, loading: confirmLoading } = useConfirmPayment();
+  // Payment hooks with error handling
+  let confirmPayment = null;
+  let confirmLoading = false;
+  
+  try {
+    const paymentHook = useConfirmPayment();
+    confirmPayment = paymentHook.confirmPayment;
+    confirmLoading = paymentHook.loading;
+  } catch (error) {
+    console.log('useConfirmPayment error:', error);
+  }
 
   const pricingBreakdown = getPassengerPricingBreakdown(ride.price, seats);
   
@@ -46,7 +71,6 @@ export default function StripeApp({ route, navigation }) {
       if (session?.user?.email) {
         setUserEmail(session.user.email);
       } else {
-        // Fallback to profile email
         const { data: profile } = await profileApi.getProfile();
         if (profile?.email) {
           setUserEmail(profile.email);
@@ -58,33 +82,44 @@ export default function StripeApp({ route, navigation }) {
     }
   };
 
-  // Test server connection function - SKIP PAYMENT AND BOOK RIDE
+  // SKIP PAYMENT AND BOOK RIDE DIRECTLY
   const testServerConnection = async () => {
+    console.log('🧪 Skip Payment button clicked!');
+    
     if (!agreesToTerms) {
       Alert.alert("Terms Required", "Please agree to the terms and conditions to continue.");
       return;
     }
 
     setLoading(true);
+    console.log('🚀 Starting booking process...');
 
     try {
-    const luggagePayload = {
-      small: luggage?.small ?? 0,
-      medium: luggage?.medium ?? 0,
-      large: luggage?.large ?? 0,
-    };
+      const luggagePayload = {
+        small: luggage?.small ?? 0,
+        medium: luggage?.medium ?? 0,
+        large: luggage?.large ?? 0,
+      };
 
-    const { data, error } = await ridesApi.bookRide(ride.id, seats, luggagePayload);
+      console.log('📦 Luggage payload:', luggagePayload);
+      console.log('🎫 Booking ride:', ride.id, 'seats:', seats);
+
+      const { data, error } = await ridesApi.bookRide(ride.id, seats, luggagePayload);
+      
+      console.log('📊 Booking result:', { data, error });
+      
       if (error) {
-        console.error('Booking error:', error);
-        Alert.alert("Booking Error", "Failed to book ride. Please try again.");
+        console.error('❌ Booking error:', error);
+        Alert.alert("Booking Error", `Failed to book ride: ${error.message || error}`);
         return;
       }
 
+      console.log('✅ Booking successful!');
       Alert.alert("Success", "Booking successful!", [
         {
           text: "OK",
           onPress: () => {
+            console.log('🏠 Navigating to My Rides...');
             navigation.reset({
               index: 0,
               routes: [
@@ -105,14 +140,14 @@ export default function StripeApp({ route, navigation }) {
         }
       ]);
     } catch (err) {
-      console.error('Booking error:', err);
-      Alert.alert("Booking Error", "Failed to book ride. Please try again.");
+      console.error('💥 Booking error:', err);
+      Alert.alert("Booking Error", `Something went wrong: ${err.message}`);
     } finally {
       setLoading(false);
+      console.log('🏁 Booking process finished');
     }
   };
 
-  // UPDATED: Fetch payment intent from Vercel backend
   const fetchPaymentIntentClientSecret = async () => {
     try {
       console.log('🔗 Fetching payment intent from:', `${API_URL}/api/create-payment-intent`);
@@ -199,57 +234,55 @@ export default function StripeApp({ route, navigation }) {
     }
   };
 
-const completeBooking = async () => {
-  try {
-    console.log('📝 Booking ride after successful payment...');
-    
-    // Prepare luggage payload
-    const luggagePayload = {
-      small: luggage?.small ?? 0,
-      medium: luggage?.medium ?? 0,
-      large: luggage?.large ?? 0,
-    };
+  const completeBooking = async () => {
+    try {
+      console.log('📝 Booking ride after successful payment...');
+      
+      const luggagePayload = {
+        small: luggage?.small ?? 0,
+        medium: luggage?.medium ?? 0,
+        large: luggage?.large ?? 0,
+      };
 
-    // Make the booking call with luggage
-    const { data, error } = await ridesApi.bookRide(ride.id, seats, luggagePayload);
-    
-    if (error) {
-      console.error('❌ Booking error after payment:', error);
-      Alert.alert("Booking Error", "Payment successful but booking failed. Please contact support.");
-      return;
-    }
-    
-    console.log('✅ Booking successful after payment:', data);
-    
-    Alert.alert("Success", "Payment and booking successful!", [
-      {
-        text: "OK",
-        onPress: () => {
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'MainTabs',
-                state: {
-                  index: 1, // Navigate to My Rides tab (index 1)
-                  routes: [
-                    { name: 'Home' },
-                    { name: 'My Rides', params: { initialTab: 'booked', refresh: true } },
-                    { name: 'Profile' }
-                  ],
-                },
-              },
-            ],
-          });
-        }
+      const { data, error } = await ridesApi.bookRide(ride.id, seats, luggagePayload);
+      
+      if (error) {
+        console.error('❌ Booking error after payment:', error);
+        Alert.alert("Booking Error", "Payment successful but booking failed. Please contact support.");
+        return;
       }
-    ]);
-    
-  } catch (bookingErr) {
-    console.error('💥 Booking error:', bookingErr);
-    Alert.alert("Booking Error", "Payment successful but booking failed. Please contact support.");
-  }
-};
+      
+      console.log('✅ Booking successful after payment:', data);
+      
+      Alert.alert("Success", "Payment and booking successful!", [
+        {
+          text: "OK",
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'MainTabs',
+                  state: {
+                    index: 1,
+                    routes: [
+                      { name: 'Home' },
+                      { name: 'My Rides', params: { initialTab: 'booked', refresh: true } },
+                      { name: 'Profile' }
+                    ],
+                  },
+                },
+              ],
+            });
+          }
+        }
+      ]);
+      
+    } catch (bookingErr) {
+      console.error('💥 Booking error:', bookingErr);
+      Alert.alert("Booking Error", "Payment successful but booking failed. Please contact support.");
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -264,12 +297,10 @@ const completeBooking = async () => {
   const formatTime = (timeString) => {
     if (!timeString) return '';
     
-    // Check if time is already formatted (contains AM/PM)
     if (timeString.includes('AM') || timeString.includes('PM')) {
-      return timeString; // Already formatted, return as is
+      return timeString;
     }
     
-    // Handle both HH:mm and HH:mm:ss formats
     const timeParts = timeString.split(':');
     const hour = parseInt(timeParts[0], 10);
     const minute = timeParts[1];
@@ -278,7 +309,6 @@ const completeBooking = async () => {
     return `${hour12}:${minute} ${ampm}`;
   };
 
-  // Render for all platforms - removed web restriction
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -291,15 +321,30 @@ const completeBooking = async () => {
 
       <View style={styles.content}>
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          {/* Development Test Button - ALWAYS SHOW FOR TESTING */}
-          {true && (
-            <TouchableOpacity 
-              onPress={testServerConnection}
-              style={styles.testButton}
-            >
-              <Text style={styles.testButtonText}>Skip Payment (TESTING)</Text>
-            </TouchableOpacity>
-          )}
+          {/* ALWAYS SHOW SKIP PAYMENT BUTTON */}
+          <TouchableOpacity 
+            onPress={testServerConnection}
+            style={[styles.testButton, { 
+              backgroundColor: '#007AFF',
+              marginBottom: 20,
+              padding: 15,
+              borderRadius: 8,
+              alignItems: 'center'
+            }]}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={[styles.testButtonText, { 
+                color: '#fff',
+                fontSize: 16,
+                fontWeight: 'bold'
+              }]}>
+                🧪 Skip Payment (TESTING) - Book Ride Now
+              </Text>
+            )}
+          </TouchableOpacity>
 
           {/* Environment Indicator */}
           <View style={{
@@ -313,8 +358,31 @@ const completeBooking = async () => {
               🔧 TESTING MODE - Skip Payment Available
             </Text>
             <Text style={{ color: 'white', fontSize: 10 }}>
-              API: {API_URL} | Platform: {Platform.OS}
+              Platform: {Platform.OS} | Check console for logs
             </Text>
+          </View>
+
+          {/* Terms and Conditions - MOVED UP */}
+          <View style={styles.termsCard}>
+            <TouchableOpacity 
+              style={styles.checkboxContainer}
+              onPress={() => {
+                console.log('📋 Terms checkbox clicked, current:', agreesToTerms);
+                setAgreesToTerms(!agreesToTerms);
+              }}
+            >
+              <View style={[styles.checkbox, agreesToTerms && styles.checkboxChecked]}>
+                {agreesToTerms && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <View style={styles.termsTextContainer}>
+                <Text style={styles.termsText}>
+                  By booking, I agree to the{' '}
+                  <Text style={styles.termsLink}>Terms of Service</Text>
+                  {' '}and{' '}
+                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Ride Summary Card */}
@@ -357,30 +425,6 @@ const completeBooking = async () => {
               </View>
             </View>
 
-            <View style={styles.rideDetailsRow}>
-              <View style={styles.rideDetail}>
-                <Text style={styles.detailLabel}>Driver's Price</Text>
-                <Text style={styles.detailValue}>${ride.price}</Text>
-              </View>
-              <View style={styles.rideDetail}>
-                <Text style={styles.detailLabel}>Your Discount</Text>
-                <Text style={styles.detailValue}>{Math.round((1-pricingBreakdown.discountPercentage )* 100)}%</Text>
-              </View>
-            </View>
-
-            {seats > 1 && (
-              <View style={styles.rideDetailsRow}>
-                <View style={styles.rideDetail}>
-                  <Text style={styles.detailLabel}>Price per Seat</Text>
-                  <Text style={styles.detailValue}>${pricingBreakdown.pricePerSeat}</Text>
-                </View>
-                <View style={styles.rideDetail}>
-                  <Text style={styles.detailLabel}>You Save</Text>
-                  <Text style={styles.savingsValue}>${pricingBreakdown.savings}</Text>
-                </View>
-              </View>
-            )}
-
             <View style={styles.divider} />
 
             <View style={styles.priceRow}>
@@ -389,11 +433,10 @@ const completeBooking = async () => {
             </View>
           </View>
 
-          {/* Payment Methods Card */}
+          {/* Payment Methods Card - Optional */}
           <View style={styles.paymentCard}>
-            <Text style={styles.cardTitle}>Payment Method</Text>
+            <Text style={styles.cardTitle}>Payment Method (Optional - Use Skip Button Above)</Text>
 
-            {/* Card Payment */}
             <Text style={styles.sectionLabel}>Card Details</Text>
             {CardField && (
               <CardField
@@ -406,26 +449,6 @@ const completeBooking = async () => {
             )}
           </View>
 
-          {/* Terms and Conditions */}
-          <View style={styles.termsCard}>
-            <TouchableOpacity 
-              style={styles.checkboxContainer}
-              onPress={() => setAgreesToTerms(!agreesToTerms)}
-            >
-              <View style={[styles.checkbox, agreesToTerms && styles.checkboxChecked]}>
-                {agreesToTerms && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <View style={styles.termsTextContainer}>
-                <Text style={styles.termsText}>
-                  By booking, I agree to the{' '}
-                  <Text style={styles.termsLink}>Terms of Service</Text>
-                  {' '}and{' '}
-                  <Text style={styles.termsLink}>Privacy Policy</Text>
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
           {/* Pay Button */}
           <TouchableOpacity
             style={[styles.payButton, (!agreesToTerms || loading) && styles.payButtonDisabled]}
@@ -435,11 +458,24 @@ const completeBooking = async () => {
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.payButtonText}>Pay ${totalPrice}</Text>
+              <Text style={styles.payButtonText}>Pay ${totalPrice} (May Not Work)</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
       </View>
     </SafeAreaView>
+  );
+}
+
+// Export main component wrapped in StripeProvider
+export default function StripeApp(props) {
+  const stripePublishableKey = "pk_test_51RFSvZBzodOqsZP1NrhYlQsriGXAuf4A6YZwPwJ4ouFQyceljKBp5WGZhX8V3kTHTlww8mtHFH2JlqbuNwGGCDBw004h4gAnHX";
+  
+  console.log('🏦 StripeApp initialized with Stripe key:', stripePublishableKey ? 'Present' : 'Missing');
+  
+  return (
+    <StripeProvider publishableKey={stripePublishableKey}>
+      <StripeAppContent {...props} />
+    </StripeProvider>
   );
 }
