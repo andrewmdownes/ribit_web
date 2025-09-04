@@ -292,7 +292,7 @@ const completeBooking = async () => {
       <View style={styles.content}>
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           {/* Development Test Button - Only show in development */}
-          {__DEV__ && (
+          {(process.env.NODE_ENV === 'development' || __DEV__) && (
             <TouchableOpacity 
               onPress={testServerConnection}
               style={styles.testButton}
