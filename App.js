@@ -8,8 +8,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// REMOVED: Platform-specific Stripe import from here - we'll load it only in StripeApp
-
 // Import screens
 import SignUpScreen from './components/SignUpScreen';
 import SignInScreen from './components/SignInScreen';
@@ -69,8 +67,6 @@ export default function App() {
   });
 
   if (!fontsLoaded) return null;
-
-  // REMOVED: StripeProvider from here - now StripeApp handles its own Stripe loading
 
   return (
     <NavigationContainer>

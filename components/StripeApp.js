@@ -82,6 +82,59 @@ function StripeAppContent({ route, navigation }) {
     }
   };
 
+  // IMPROVED NAVIGATION FUNCTION
+  const navigateToMyRidesBooked = async () => {
+    console.log('🏠 Navigating to My Rides - Booked tab...');
+    
+    try {
+      // Method 1: Try direct navigation first
+      navigation.navigate('MainTabs', {
+        screen: 'My Rides',
+        params: { 
+          initialTab: 'booked', 
+          refresh: true,
+          timestamp: Date.now() // Force refresh
+        }
+      });
+      console.log('✅ Navigation successful (Method 1)');
+    } catch (error) {
+      console.log('⚠️ Method 1 failed, trying reset method...', error);
+      
+      try {
+        // Method 2: Reset then navigate
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'MainTabs',
+              params: {
+                screen: 'My Rides',
+                params: { 
+                  initialTab: 'booked', 
+                  refresh: true,
+                  timestamp: Date.now()
+                }
+              }
+            }
+          ],
+        });
+        console.log('✅ Navigation successful (Method 2)');
+      } catch (resetError) {
+        console.log('⚠️ Reset method failed, using basic navigation...', resetError);
+        
+        // Method 3: Basic navigation fallback
+        navigation.navigate('MainTabs');
+        setTimeout(() => {
+          navigation.navigate('My Rides', { 
+            initialTab: 'booked', 
+            refresh: true 
+          });
+        }, 500);
+        console.log('✅ Navigation successful (Method 3)');
+      }
+    }
+  };
+
   // SKIP PAYMENT AND BOOK RIDE DIRECTLY
   const testServerConnection = async () => {
     console.log('🧪 Skip Payment button clicked!');
@@ -115,30 +168,22 @@ function StripeAppContent({ route, navigation }) {
       }
 
       console.log('✅ Booking successful!');
-      Alert.alert("Success", "Booking successful!", [
-        {
-          text: "OK",
-          onPress: () => {
-            console.log('🏠 Navigating to My Rides...');
-            navigation.reset({
-              index: 0,
-              routes: [
-                {
-                  name: 'MainTabs',
-                  state: {
-                    index: 1, // Navigate to My Rides tab
-                    routes: [
-                      { name: 'Home' },
-                      { name: 'My Rides', params: { initialTab: 'booked', refresh: true } },
-                      { name: 'Profile' }
-                    ],
-                  },
-                },
-              ],
-            });
+      
+      // IMPROVED SUCCESS HANDLING
+      Alert.alert(
+        "Success", 
+        "Booking successful! You will now see your booked ride.", 
+        [
+          {
+            text: "View My Rides",
+            onPress: navigateToMyRidesBooked
           }
+        ],
+        { 
+          onDismiss: navigateToMyRidesBooked // Auto-navigate if user dismisses
         }
-      ]);
+      );
+      
     } catch (err) {
       console.error('💥 Booking error:', err);
       Alert.alert("Booking Error", `Something went wrong: ${err.message}`);
@@ -254,29 +299,20 @@ function StripeAppContent({ route, navigation }) {
       
       console.log('✅ Booking successful after payment:', data);
       
-      Alert.alert("Success", "Payment and booking successful!", [
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.reset({
-              index: 0,
-              routes: [
-                {
-                  name: 'MainTabs',
-                  state: {
-                    index: 1,
-                    routes: [
-                      { name: 'Home' },
-                      { name: 'My Rides', params: { initialTab: 'booked', refresh: true } },
-                      { name: 'Profile' }
-                    ],
-                  },
-                },
-              ],
-            });
+      // IMPROVED SUCCESS HANDLING FOR PAID BOOKING
+      Alert.alert(
+        "Success", 
+        "Payment and booking successful! You will now see your booked ride.", 
+        [
+          {
+            text: "View My Rides",
+            onPress: navigateToMyRidesBooked
           }
+        ],
+        { 
+          onDismiss: navigateToMyRidesBooked
         }
-      ]);
+      );
       
     } catch (bookingErr) {
       console.error('💥 Booking error:', bookingErr);
@@ -341,7 +377,7 @@ function StripeAppContent({ route, navigation }) {
                 fontSize: 16,
                 fontWeight: 'bold'
               }]}>
-                🧪 Skip Payment (TESTING) - Book Ride Now
+                🧪 Skip Payment → Book Ride & Go to My Rides
               </Text>
             )}
           </TouchableOpacity>
@@ -355,10 +391,10 @@ function StripeAppContent({ route, navigation }) {
             alignItems: 'center'
           }}>
             <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>
-              🔧 TESTING MODE - Skip Payment Available
+              🔧 TESTING MODE - Navigation Fixed
             </Text>
             <Text style={{ color: 'white', fontSize: 10 }}>
-              Platform: {Platform.OS} | Check console for logs
+              Platform: {Platform.OS} | Will redirect to My Rides after booking
             </Text>
           </View>
 
