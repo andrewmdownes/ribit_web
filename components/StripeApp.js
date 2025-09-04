@@ -58,36 +58,6 @@ export default function StripeApp({ route, navigation }) {
     }
   };
 
-  // Show web message if on web platform
-  if (Platform.OS === 'web') {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment</Text>
-          <View style={styles.placeholder} />
-        </View>
-        
-        <View style={styles.content}>
-          <View style={styles.webMessage}>
-            <Text style={styles.webMessageTitle}>Payment Not Available on Web</Text>
-            <Text style={styles.webMessageText}>
-              Stripe payments are only available on mobile devices. Please use the mobile app to complete your booking.
-            </Text>
-            <TouchableOpacity 
-              style={styles.returnButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.returnButtonText}>Return to Ride Details</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   // Test server connection function
   const testServerConnection = async () => {
     if (!agreesToTerms) {
@@ -308,7 +278,7 @@ const completeBooking = async () => {
     return `${hour12}:${minute} ${ampm}`;
   };
 
-  // Native mobile platform - show enhanced Stripe interface
+  // Render for all platforms - removed web restriction
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -343,7 +313,7 @@ const completeBooking = async () => {
               {__DEV__ ? '🔧 DEVELOPMENT MODE' : '🚀 PRODUCTION MODE'}
             </Text>
             <Text style={{ color: 'white', fontSize: 10 }}>
-              API: {API_URL}
+              API: {API_URL} | Platform: {Platform.OS}
             </Text>
           </View>
 

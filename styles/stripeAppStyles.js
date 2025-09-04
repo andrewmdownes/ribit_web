@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -47,48 +47,20 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: '#f9f9f9',
+    ...(Platform.OS === 'web' && {
+      minHeight: '100vh',
+      justifyContent: 'flex-start',
+    }),
   },
 
-  // Web message styles
-  webMessage: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  webMessageTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-    color: '#333',
-    fontFamily: 'Roboto',
-  },
-  webMessageText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#666',
-    fontFamily: 'Roboto',
-    lineHeight: 24,
-  },
-  returnButton: {
-    backgroundColor: '#5DBE62',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  returnButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Roboto',
-  },
-
-  // Main content - UPDATED: Removed flex: 1 since it's now inside content wrapper
+  // Main content
   scrollContainer: {
     padding: 15,
+    ...(Platform.OS === 'web' && {
+      maxWidth: 600,
+      alignSelf: 'center',
+      width: '100%',
+    }),
   },
 
   // Development test button
@@ -240,46 +212,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto',
   },
 
-  // Digital payment buttons (uncomment when implementing Apple Pay/Google Pay)
-  /*
-  digitalPayButton: {
-    backgroundColor: '#000',
-    paddingVertical: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  digitalPayText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Roboto',
-  },
-
-  // Or divider
-  orContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e5e5e5',
-  },
-  orText: {
-    marginHorizontal: 15,
-    color: '#666',
-    fontSize: 14,
-    fontFamily: 'Roboto',
-  },
-  */
-
   // Section labels
   sectionLabel: {
     fontSize: 16,
@@ -289,10 +221,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto',
   },
 
-  // Card input styles
+  // Card input styles - Updated for better web compatibility
   cardContainer: {
-    height: 50,
+    height: Platform.OS === 'web' ? 50 : 50,
     marginBottom: 10,
+    ...(Platform.OS === 'web' && {
+      // Web-specific styling is handled in the CardField component
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#e1e1e1',
+      backgroundColor: '#f5f5f5',
+    }),
   },
   card: {
     backgroundColor: '#f5f5f5',
@@ -301,12 +240,19 @@ const styles = StyleSheet.create({
     borderColor: '#e1e1e1',
     fontSize: 16,
     fontFamily: 'Roboto',
+    ...(Platform.OS === 'web' && {
+      // Additional web styling if needed
+      outline: 'none',
+    }),
   },
 
   // Terms and conditions
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+    }),
   },
   checkbox: {
     width: 20,
@@ -319,6 +265,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    }),
   },
   checkboxChecked: {
     backgroundColor: '#5DBE62',
@@ -355,10 +305,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      transition: 'backgroundColor 0.2s ease',
+    }),
   },
   payButtonDisabled: {
     backgroundColor: '#c7e6c3',
     opacity: 0.6,
+    ...(Platform.OS === 'web' && {
+      cursor: 'not-allowed',
+    }),
   },
   payButtonText: {
     color: '#fff',
@@ -366,10 +323,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Roboto',
   },
-    // Savings display
+  
+  // Savings display
   savingsValue: {
     fontSize: 16,
     color: '#28a745',
+    fontWeight: '600',
+    fontFamily: 'Roboto',
+  },
+
+  // Legacy web message styles (keeping for backward compatibility but not used)
+  webMessage: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  webMessageTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+    fontFamily: 'Roboto',
+  },
+  webMessageText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
+    fontFamily: 'Roboto',
+    lineHeight: 24,
+  },
+  returnButton: {
+    backgroundColor: '#5DBE62',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  returnButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Roboto',
   },
