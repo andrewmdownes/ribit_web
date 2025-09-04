@@ -82,7 +82,7 @@ export default function App() {
 
   if (!fontsLoaded) return null;
 
-  const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const stripePublishableKey = "pk_test_51RFSvZBzodOqsZP1NrhYlQsriGXAuf4A6YZwPwJ4ouFQyceljKBp5WGZhX8V3kTHTlww8mtHFH2JlqbuNwGGCDBw004h4gAnHX";
 
   return (
     <StripeProvider publishableKey={stripePublishableKey}>
